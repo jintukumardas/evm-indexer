@@ -1,0 +1,65 @@
+version: '3.9'
+
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ['CMD', 'mongosh', '--eval', "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      LOG_LEVEL: info
+      API_ENABLED: 'true'
+      API_PORT: 3000
+      MONGO_URI: mongodb://mongo:27017/lifi_indexer
+      POLYGON_RPC_URL: ${POLYGON_RPC_URL:-https://polygon-rpc.com}
+      POLYGON_FEE_COLLECTOR_ADDRESS: ${POLYGON_FEE_COLLECTOR_ADDRESS:-0xbD6C7B0d2f68c2b7805d88388319cfB6EcB50eA9}
+      POLYGON_START_BLOCK: ${POLYGON_START_BLOCK:-78600000}
+      POLYGON_CONFIRMATIONS: ${POLYGON_CONFIRMATIONS:-12}
+      POLYGON_CHUNK_SIZE: ${POLYGON_CHUNK_SIZE:-2000}
+      POLYGON_MIN_CHUNK_SIZE: ${POLYGON_MIN_CHUNK_SIZE:-50}
+      POLYGON_MAX_CHUNK_RETRIES: ${POLYGON_MAX_CHUNK_RETRIES:-6}
+      POLYGON_REORG_WINDOW: ${POLYGON_REORG_WINDOW:-0}
+    ports:
+      - '3000:3000'
+    command: ['node', 'dist/index.js']
+
+  indexer:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      LOG_LEVEL: info
+      API_ENABLED: 'false'
+      MONGO_URI: mongodb://mongo:27017/lifi_indexer
+      POLYGON_RPC_URL: ${POLYGON_RPC_URL:-https://polygon-rpc.com}
+      POLYGON_FEE_COLLECTOR_ADDRESS: ${POLYGON_FEE_COLLECTOR_ADDRESS:-0xbD6C7B0d2f68c2b7805d88388319cfB6EcB50eA9}
+      POLYGON_START_BLOCK: ${POLYGON_START_BLOCK:-78600000}
+      POLYGON_CONFIRMATIONS: ${POLYGON_CONFIRMATIONS:-12}
+      POLYGON_CHUNK_SIZE: ${POLYGON_CHUNK_SIZE:-2000}
+      POLYGON_MIN_CHUNK_SIZE: ${POLYGON_MIN_CHUNK_SIZE:-50}
+      POLYGON_MAX_CHUNK_RETRIES: ${POLYGON_MAX_CHUNK_RETRIES:-6}
+      POLYGON_REORG_WINDOW: ${POLYGON_REORG_WINDOW:-0}
+      SYNC_RUN_ONCE: 'false'
+      SYNC_INTERVAL_MS: '15000'
+    command: ['node', 'dist/jobs/syncIndexer.js']
+
+volumes:
+  mongo-data:
