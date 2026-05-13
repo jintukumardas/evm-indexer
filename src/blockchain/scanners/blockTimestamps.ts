@@ -36,7 +36,11 @@ export async function fetchBlockTimestamps(
         label: `${opts.label}-getBlock(${n})`,
         signal: opts.signal,
       })
-      out.set(n, block.timestamp)
+      // ethers returns null when a block is unknown/pruned/freshly reorged.
+      // Skip rather than dereferencing — the parser already drops events
+      // whose blockTimestamp is missing from this map, so the chunk keeps
+      // making progress instead of crashing the whole pass.
+      if (block) out.set(n, block.timestamp)
     }
   }
   await Promise.all(

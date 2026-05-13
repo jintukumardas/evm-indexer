@@ -1,20 +1,20 @@
 {
-  "name": "lifi-fee-collector-indexer",
+  "name": "evm-event-indexer",
   "version": "0.1.0",
   "private": true,
-  "author": "Jintu Kumar Das",
-  "description": "Indexer for LI.FI FeeCollector FeesCollected events on EVM chains.",
+  "author": "Jintu Kumar Das <jintukumardas@gmail.com>",
+  "description": "Indexer for EVM contract events.",
   "license": "MIT",
   "engines": {
     "node": ">=20.0.0"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "start": "node dist/index.js",
-    "dev": "tsx watch src/index.ts",
-    "sync": "tsx src/jobs/syncIndexer.ts",
-    "sync:built": "node dist/jobs/syncIndexer.js",
-    "backfill": "tsx src/scripts/backfill.ts",
+    "start": "node --env-file-if-exists=.env dist/index.js",
+    "dev": "tsx watch --env-file=.env src/index.ts",
+    "sync": "tsx --env-file=.env src/jobs/syncIndexer.ts",
+    "sync:built": "node --env-file-if-exists=.env dist/jobs/syncIndexer.js",
+    "backfill": "tsx --env-file=.env src/scripts/backfill.ts",
     "e2e": "bash scripts/e2e/run.sh",
     "test": "jest --runInBand",
     "test:unit": "jest --runInBand tests/unit",

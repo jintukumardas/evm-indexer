@@ -61,12 +61,24 @@ export class FeeEventRepository {
     } catch (err) {
       const e = err as {
         code?: number
-        writeErrors?: Array<{ code?: number }>
+        // mongoose wraps each WriteError as `{ err: { code, errmsg, ... }, index }`;
+        // the per-entry code lives at `.err.code`, NOT `.code` directly.
+        writeErrors?: Array<{ code?: number; err?: { code?: number } }>
         insertedDocs?: unknown[]
       }
       const writeErrors = e.writeErrors ?? []
-      const onlyDuplicates = writeErrors.length > 0 && writeErrors.every((w) => w.code === 11000)
-      if (e.code === 11000 || onlyDuplicates) {
+      const entryCode = (w: { code?: number; err?: { code?: number } }): number | undefined =>
+        w.err?.code ?? w.code
+      // The top-level `e.code` is propagated from one of the writeErrors
+      // (often the first), so a mixed batch of duplicates plus a real
+      // failure can still report `code === 11000`. Trust the per-entry
+      // codes when they are present; fall back to the top-level code only
+      // when `writeErrors` is missing entirely.
+      const everyEntryIsDup =
+        writeErrors.length > 0
+          ? writeErrors.every((w) => entryCode(w) === 11000)
+          : e.code === 11000
+      if (everyEntryIsDup) {
         const inserted =
           e.insertedDocs?.length ?? Math.max(0, events.length - writeErrors.length)
         return { insertedCount: inserted, duplicateCount: events.length - inserted }

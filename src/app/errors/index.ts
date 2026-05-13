@@ -76,6 +76,8 @@ export function isRangeLimitError(err: unknown): boolean {
   return (
     haystack.includes('block range') ||
     haystack.includes('range is too') ||
+    (haystack.includes('ranges over') && haystack.includes('blocks')) ||
+    haystack.includes('blocks are not supported') ||
     haystack.includes('response size') ||
     haystack.includes('response is too large') ||
     haystack.includes('query returned more than') ||

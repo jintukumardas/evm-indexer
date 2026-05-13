@@ -97,6 +97,19 @@ export class ReorgRunner {
       for (const p of parsed) fetchedIdentities.push(plugin.identityOf(p))
     }
 
+    // If the operator aborted mid-fetch, `fetchedIdentities` is a partial
+    // snapshot of the canonical chain. Diffing a partial fetched-set against
+    // the full persisted-set would flag every row in the un-scanned portion
+    // of the window as `removed: true` — silent mass data loss. Bail out
+    // before touching the DB; the next pass will reconcile cleanly.
+    if (signal?.aborted) {
+      logger.info(
+        { chain: chain.key, plugin: plugin.key, fromBlock, toBlock },
+        'Reorg reconciliation aborted before diff — leaving persisted state untouched',
+      )
+      return null
+    }
+
     const persistedRows = await plugin.findInRange(fromBlock, toBlock)
     const persistedIdentities = persistedRows.map((r) => r.identity)
 

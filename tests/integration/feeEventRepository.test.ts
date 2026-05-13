@@ -63,6 +63,24 @@ describe('FeeEventRepository.bulkInsert', () => {
     const res = await repo.bulkInsert([])
     expect(res).toEqual({ insertedCount: 0, duplicateCount: 0 })
   })
+
+  it('throws when writeErrors contain anything other than duplicate-keys', async () => {
+    const err = Object.assign(new Error('Bulk write error'), {
+      code: 11000, // top-level mirrors one of the entries (often the first)
+      writeErrors: [
+        { err: { code: 11000, errmsg: 'dup key' }, index: 0 },
+        { err: { code: 121, errmsg: 'DocumentValidationFailure' }, index: 1 },
+      ],
+      insertedDocs: [],
+    })
+    const spy = jest
+      .spyOn(FeeEventModel, 'insertMany')
+      .mockRejectedValueOnce(err as never)
+    await expect(repo.bulkInsert([makeEvent({ logIndex: 99 })])).rejects.toThrow(
+      /Bulk insert failed/,
+    )
+    spy.mockRestore()
+  })
 })
 
 describe('FeeEventRepository.listByIntegrator', () => {
